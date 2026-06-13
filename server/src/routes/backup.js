@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, readdir, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
+import { URL } from 'node:url';
 import { config } from '../config.js';
 import { asyncHandler, badRequest, notFound } from '../utils/http.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
@@ -17,9 +18,19 @@ async function ensureBackupDir() {
   return path.resolve(config.backupDir);
 }
 
-// pg_dump / psql read connection details from PG* / the URL.
+// Pass connection details to pg_dump / psql via PG* env vars (parsed from the
+// configured URL) so credentials never appear in the process argument list.
 function pgEnv() {
-  return { ...process.env, PGSSLMODE: process.env.PGSSLMODE || 'prefer' };
+  const u = new URL(config.databaseUrl);
+  return {
+    ...process.env,
+    PGHOST: u.hostname,
+    PGPORT: u.port || '5432',
+    PGUSER: decodeURIComponent(u.username),
+    PGPASSWORD: decodeURIComponent(u.password),
+    PGDATABASE: u.pathname.replace(/^\//, ''),
+    PGSSLMODE: process.env.PGSSLMODE || 'prefer',
+  };
 }
 
 // Run a command via spawn (no shell) so the database URL can never be
@@ -60,7 +71,7 @@ router.post(
     const dir = await ensureBackupDir();
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     const file = path.join(dir, `backup-${stamp}.sql`);
-    await run('pg_dump', ['--no-owner', '--no-privileges', config.databaseUrl], { stdout: file });
+    await run('pg_dump', ['--no-owner', '--no-privileges', '--clean', '--if-exists'], { stdout: file });
     const s = await stat(file);
     res.status(201).json({ name: path.basename(file), size: s.size, created_at: s.mtime });
   }),
@@ -78,7 +89,7 @@ router.post(
     } catch {
       throw notFound('backup file not found');
     }
-    await run('psql', [config.databaseUrl], { stdin: file });
+    await run('psql', ['--set', 'ON_ERROR_STOP=1'], { stdin: file });
     res.json({ ok: true, restored: name });
   }),
 );

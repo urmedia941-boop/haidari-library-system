@@ -58,7 +58,9 @@ function ExpenseForm({ onClose, onSaved }) {
   async function submit(e) {
     e.preventDefault();
     try {
-      await api.post('/expenses', { ...form, amount: Number(form.amount), spent_at: form.spent_at || null });
+      await api.post('/expenses', {
+        ...form, amount: Number(form.amount), category: form.category || null, spent_at: form.spent_at || null,
+      });
       onSaved();
     } catch (err) { setError(apiError(err)); }
   }
