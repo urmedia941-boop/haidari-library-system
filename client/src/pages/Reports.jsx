@@ -24,8 +24,10 @@ export default function Reports() {
       pl: '/reports/profit-loss', category: '/reports/sales-by-category',
       website: '/reports/website', gifts: '/reports/gifts', suppliers: '/reports/suppliers',
     };
-    api.get(map[tab], { params }).then((r) => setData(r.data));
+    api.get(map[tab], { params }).then((r) => setData({ tab, payload: r.data }));
   }, [tab, range]);
+
+  const ready = data && data.tab === tab;
 
   return (
     <>
@@ -39,13 +41,13 @@ export default function Reports() {
         <div className="field"><label>تا بەرواری</label><input type="date" value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} /></div>
       </div>
 
-      {!data ? <Loading /> : (
+      {!ready ? <Loading /> : (
         <>
-          {tab === 'pl' && <ProfitLoss d={data} />}
-          {tab === 'category' && <CategoryTable rows={data} />}
-          {tab === 'website' && <Website d={data} />}
-          {tab === 'gifts' && <Gifts d={data} />}
-          {tab === 'suppliers' && <SupplierTable rows={data} />}
+          {tab === 'pl' && <ProfitLoss d={data.payload} />}
+          {tab === 'category' && <CategoryTable rows={data.payload} />}
+          {tab === 'website' && <Website d={data.payload} />}
+          {tab === 'gifts' && <Gifts d={data.payload} />}
+          {tab === 'suppliers' && <SupplierTable rows={data.payload} />}
         </>
       )}
     </>

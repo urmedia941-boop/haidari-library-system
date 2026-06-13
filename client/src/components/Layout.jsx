@@ -16,7 +16,7 @@ const NAV = [
   { to: '/suppliers', label: 'دابینکەران' },
   { to: '/reports', label: 'ڕاپۆرتەکان' },
   { section: 'سیستەم', roles: ['admin', 'manager'] },
-  { to: '/sales', label: 'مێژووی فرۆشتن' },
+  { to: '/sales', label: 'مێژووی فرۆشتن', roles: ['admin', 'manager'] },
   { to: '/settings', label: 'ڕێکخستن و کۆپیەدەگ', roles: ['admin', 'manager'] },
 ];
 

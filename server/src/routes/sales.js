@@ -10,11 +10,15 @@ function round2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 }
 
-async function nextInvoiceNo(client) {
-  const { rows } = await client.query("SELECT nextval(pg_get_serial_sequence('sales','id')) AS n");
-  const seq = rows[0].n;
+// Reserve the next sales id and derive the matching invoice number from it,
+// so the invoice number always embeds the actual row id (no sequence gaps).
+async function nextInvoice(client) {
+  const { rows } = await client.query(
+    "SELECT nextval(pg_get_serial_sequence('sales','id'))::bigint AS id",
+  );
+  const id = rows[0].id;
   const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  return `INV-${stamp}-${String(seq).padStart(5, '0')}`;
+  return { id, invoiceNo: `INV-${stamp}-${String(id).padStart(5, '0')}` };
 }
 
 // Create a sale (POS checkout or website order).
@@ -62,14 +66,14 @@ router.post(
 
       const section = sections.size > 1 ? 'mixed' : [...sections][0];
       const total = round2(subtotal - discountTotal);
-      const invoiceNo = await nextInvoiceNo(client);
+      const { id: saleId, invoiceNo } = await nextInvoice(client);
 
       const { rows: saleRows } = await client.query(
         `INSERT INTO sales
-           (invoice_no, channel, section, cashier_id, customer_name,
+           (id, invoice_no, channel, section, cashier_id, customer_name,
             subtotal, discount_total, total, cost_total, payment_method, note)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-        [invoiceNo, channel, section, req.user.id, customer_name || null,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+        [saleId, invoiceNo, channel, section, req.user.id, customer_name || null,
           round2(subtotal), round2(discountTotal), total, round2(costTotal),
           payment_method, note || null],
       );

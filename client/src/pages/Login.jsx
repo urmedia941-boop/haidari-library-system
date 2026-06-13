@@ -6,8 +6,8 @@ import { apiError } from '../api.js';
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState(import.meta.env.DEV ? 'admin' : '');
+  const [password, setPassword] = useState(import.meta.env.DEV ? 'admin123' : '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -42,7 +42,7 @@ export default function Login() {
         <button type="submit" disabled={loading} style={{ width: '100%', marginTop: 8 }}>
           {loading ? 'چوونەژوورەوە...' : 'چوونەژوورەوە'}
         </button>
-        <p style={{ marginTop: 18, fontSize: 12 }}>admin / admin123</p>
+        {import.meta.env.DEV && <p style={{ marginTop: 18, fontSize: 12 }}>admin / admin123</p>}
       </form>
     </div>
   );
