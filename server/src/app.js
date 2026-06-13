@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { config } from './config.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 
@@ -42,6 +45,18 @@ export function createApp() {
   app.use('/api/backups', backupRoutes);
 
   app.use('/api', notFoundHandler);
+
+  // Serve the built frontend (if present) so the whole app can run from a
+  // single origin in production-style deployments.
+  const clientDist = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '../../client/dist',
+  );
+  if (existsSync(clientDist)) {
+    app.use(express.static(clientDist));
+    app.get('*', (_req, res) => res.sendFile(path.join(clientDist, 'index.html')));
+  }
+
   app.use(errorHandler);
 
   return app;
